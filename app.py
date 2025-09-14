@@ -1,13 +1,22 @@
 import streamlit as st
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEndpoint
+from langchain_huggingface import ChatHuggingFace
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import ChatOpenAI
 import tempfile
+from dotenv import load_dotenv
 import os
 
-INDEX_PATH = "faiss_index"
+load_dotenv()
+
+INDEX_PATH = os.getenv("INDEX_PATH", "faiss_index")
+HF_API_TOKEN = os.getenv("HF_API_TOKEN")
+HF_MODEL_REPO = os.getenv("HF_MODEL_REPO", "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B")
+HF_MAX_TOKENS = int(os.getenv("HF_MAX_TOKENS", 512))
+HF_TEMPERATURE = float(os.getenv("HF_TEMPERATURE", 0.0))
 
 # --- 1. Index documents ---
 def index_documents(pdf_files):
@@ -50,7 +59,7 @@ def create_prompt(requirements, ts_description, example_ts=None, example_desc=No
 
 # --- 3. Generate test scenario ---
 def generate_test_scenario(prompt, vectordb):
-    retriever = vectordb.as_retriever(search_kwargs={"k": 3})
+    retriever = vectordb.as_retriever(search_kwargs={"k": 1})
     docs = retriever.invoke(prompt)
     context = "\n\n".join([d.page_content for d in docs])
 
@@ -62,15 +71,17 @@ def generate_test_scenario(prompt, vectordb):
     {prompt}
     """
 
-    llm = ChatOpenAI(
-        model='gpt-4o',
-        api_key="FAKE",
-        base_url="http://localhost:1050/v1",
-        temperature=0
+    llm_endpoint = HuggingFaceEndpoint(
+        repo_id=HF_MODEL_REPO,
+        task="text2text-generation",
+        huggingfacehub_api_token=HF_API_TOKEN,
+        temperature=HF_TEMPERATURE,
+        max_new_tokens=HF_MAX_TOKENS
     )
+    chat_model = ChatHuggingFace(llm=llm_endpoint)
 
     try:
-        return llm.invoke(final_prompt)
+        return chat_model.invoke(final_prompt)
     except Exception as e:
         return f"خطا در ارتباط با مدل: {e}"
     
