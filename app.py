@@ -40,20 +40,22 @@ def create_prompt(requirements, ts_description, example_ts=None, example_desc=No
     example_part = ""
     if example_ts and example_desc:
         example_part = f"""
-        سناریوی تست نمونه:
-        شرح: {example_desc}
-        مراحل:
+            نمونه توضیح یک سناریوی تست:
         {example_ts}
+        سناریوی تست نمونه با تمام مراحل:
+        {example_desc}
         """
 
     base_prompt = f"""
-    شما یک تحلیل‌گر سیستم هستید. یک سناریوی تست گام‌به‌گام برای بررسی نیازمندی زیر به زبان فارسی تولید کنید.
-    نیازمندی‌ها:
-    {requirements}
+    شما یک تحلیل‌گر سیستم هستید و وظیفه دارید یک سناریوی تست دقیق برای پروژه مورد نظر تولید کنید. 
+    هدف این سناریو بررسی عملکرد سیستم بر اساس نیازمندی‌ها و توضیحات ارائه‌شده است. 
+    لطفاً یک سناریوی تست با توضیح گام‌به‌گام تولید کنید که نشان دهد چگونه عملکرد زیر آزمایش می‌شود:
     توضیح سناریوی مورد نظر:
     {ts_description}
+    نیازمندی‌های پروژه:
+    {requirements}
     {example_part}
-    در نهایت، لطفاً یک جمله بنویسید که چرا این سناریو تست نیازمندی بالا را پوشش می‌دهد.
+    در خروجی نهایی، علاوه بر سناریوی تست با مراحل کامل، یک جمله یا دو جمله توضیح دهید که این سناریو چگونه نیازمندی‌ها و توضیح سناریوی مورد نظر را پوشش می‌دهد.
     """
     return base_prompt
 
@@ -62,12 +64,11 @@ def generate_test_scenario(prompt, vectordb):
     retriever = vectordb.as_retriever(search_kwargs={"k": 1})
     docs = retriever.invoke(prompt)
     context = "\n\n".join([d.page_content for d in docs])
-
     final_prompt = f"""
-    متن‌های بازیابی‌شده:
+    context:
     {context}
 
-    پرسش:
+    question:
     {prompt}
     """
 
